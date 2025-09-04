@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     tools {
-        maven 'Maven3'     // Make sure Maven is configured in Jenkins
-        nodejs 'Node16'    // Make sure NodeJS is configured in Jenkins
+        maven 'Maven3'     // Jenkins -> Global Tool Config -> Maven3
+        nodejs 'Node24'    // Jenkins -> Global Tool Config -> Node16 (NodeJS 24.7.0)
     }
 
     stages {
@@ -16,7 +16,7 @@ pipeline {
         stage('Backend Build') {
             steps {
                 dir('docker-ecommerce-backend') {
-                    sh 'mvn clean install'
+                    sh 'mvn clean install -DskipTests'
                 }
             }
         }
@@ -37,6 +37,7 @@ pipeline {
                     sh 'mvn test'
                 }
                 dir('docker-ecommerce-frontend') {
+                    // Allow frontend tests to fail without breaking pipeline
                     sh 'npm test -- --watchAll=false || true'
                 }
             }
@@ -45,12 +46,18 @@ pipeline {
         stage('Package') {
             steps {
                 echo 'Archiving artifacts...'
-                archiveArtifacts artifacts: '**/target/*.jar, docker-ecommerce-frontend/build/**', fingerprint: true
+                archiveArtifacts artifacts: 'docker-ecommerce-backend/target/*.jar, docker-ecommerce-frontend/build/**', fingerprint: true
             }
         }
     }
 
     post {
+        success {
+            echo '✅ Pipeline succeeded!'
+        }
+        failure {
+            echo '❌ Pipeline failed!'
+        }
         always {
             echo 'Pipeline completed.'
         }
